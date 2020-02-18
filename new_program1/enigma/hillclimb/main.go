@@ -453,7 +453,6 @@ func main() {
 
 		//print optimal encoded text
 		fmt.Println("final result:  ")
-		//safas
 		optimalConfig := make([]enigma.RotorConfig, len(bestRotors))
 		for index, rotor := range bestRotors {
 			ring := ring_array[index]
