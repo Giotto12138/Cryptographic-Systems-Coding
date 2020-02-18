@@ -4,7 +4,7 @@ the text to encode should be under the directory hillclimb
 
 how to use the program: 
 	
-1. If you only know following: 
+1. If you only know following of a enigma M4 machine: 
 Rotor Setup: (reﬂector) ??? ??? IV III 
 (keyboard) Initial Start 
 Positions: ??? ??? B Q 
