@@ -1,3 +1,3 @@
 # Practical-Cryptographic-Systems
 
-how to use the program, look at instructions.txt file.
+The instructions.txt file includes how to use the program.
