@@ -1,3 +1,3 @@
 # Practical-Cryptographic-Systems
 
-The instructions.txt file includes how to use the program.
+Each programming practice has a instructions file about how to use the program.
