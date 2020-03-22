@@ -1,84 +1,109 @@
 package main
 
 import (
-	"os"
-	"crypto/aes"
-	"crypto/cipher"
-	"fmt"
 	"bytes"
+	"crypto/rand"
+	"crypto/sha256"
+	"fmt"
 	"io/ioutil"
+	"os"
 )
 
+func hmac(key_mac []byte, plaintext []byte) [32]byte {
+
+	// key xor 0x36
+	kx := make([]byte, 64)
+	for i := 0; i < len(key_mac); i++ {
+		kx[i] = key_mac[i] ^ 0x36
+	}
+	// for rest of byte, fill with 0x36 to get final kx
+	for i := len(key_mac); i < 64; i++ {
+		kx[i] = 0x36
+	}
+
+	// concatenate kx and the plaintext
+	var buffer bytes.Buffer
+	buffer.Write(kx)
+	buffer.Write(plaintext)
+	kx_new := buffer.Bytes()
+
+	// get a 32 byte out from kx_new by sha256
+	out := sha256.Sum256(kx_new)
+
+	// key xor 0x5C
+	ky := make([]byte, 64)
+	for i := 0; i < len(key_mac); i++ {
+		ky[i] = key_mac[i] ^ 0x5c
+	}
+	// for rest of byte, fill with 0x5c to get final ky
+	for i := len(key_mac); i < 64; i++ {
+		ky[i] = 0x5c
+	}
+
+	// concatenate ky and the out
+	for i := 0; i < len(out); i++ {
+		ky = append(ky, out[i])
+	}
+	ky_new := ky
+
+	// get a 32 byte out from kx_new by sha256
+	tag := sha256.Sum256(ky_new)
+
+	return tag
+}
+
+func padding(plaintext []byte) []byte {
+
+	n := len(plaintext) % 16
+
+	if n != 0 {
+		for i := 0; i < (16 - n); i++ {
+			plaintext = append(plaintext, byte(16-n))
+		}
+	} else {
+		for i := 0; i < 16; i++ {
+			plaintext = append(plaintext, byte(16))
+		}
+	}
+
+	return plaintext
+}
 
 func encrypt(plaintext []byte, key_enc []byte, key_mac []byte, output string) {
 
-	c, err := aes.NewCipher(key_enc)
-	if err != nil {
-		fmt.Println(err)
-	}
-	mac := hmac (key_mac, plaintext)
-	for i:= 0; i < len(mac); i++ {
-		plaintext = append(plaintext,mac[i])
+	tag := hmac(key_mac, plaintext)
+
+	// concatenate plaintex and the tag
+	for i := 0; i < len(tag); i++ {
+		plaintext = append(plaintext, tag[i])
 	}
 
-	block_num := len(plaintext)/16
-	remain := len(plaintext)%16
-	//padding
-	block_num++
-	remain = 16-remain
-	padding := byte(remain)
-	for i := 0; i < remain; i++ {
-		plaintext = append(plaintext, padding)
-	}
-	//Generate IV
-	iv := make([]byte,16)
-	_,iv_err := rand.Read(iv)
+	// padding the plaintext
+	plaintext = padding(plaintext)
+	//fmt.Print(plaintext)
+
+	// generate random IV
+	iv := make([]byte, 16)
+	_, iv_err := rand.Read(iv)
 	if iv_err != nil {
-		fmt.Println("Error when creating IV")
+		fmt.Println("wrong iv")
 		os.Exit(1)
 	}
 
-	xored_cipher := make([]byte,16)
-	block_cipher := make([]byte,16)
-	ciphertext := make([]byte,16)
-	//encrypt first block
-	xored_cipher  = xor(plaintext[0:16],iv)
-	c.Encrypt(block_cipher,xored_cipher)
-	for i:=0; i<len(block_cipher); i++{
-		ciphertext[i] = block_cipher[i]
-	}
-
-	for i:=0; i < block_num; i++{
-		for j:=0; j<len(block_cipher); j++{
-			iv[j] = block_cipher[j]
-		}
-		xored_cipher  = xor(plaintext[16*i:16*(i+1)],iv)
-		c.Encrypt(block_cipher,xored_cipher)
-		for k:=0; k<len(block_cipher); k++{
-			ciphertext = append(ciphertext, block_cipher[k])
-		}
-
-	}
-
-	err_write := ioutil.WriteFile(outputfile, ciphertext, 0777)
-	if err_write !=nil{
-		fmt.Println("Can not write to file!")
-	}
-	fmt.Println(ciphertext)
-	return
 }
-
 
 func main() {
 
 	args := os.Args
 
+	// check the arguments
 	if len(args) != 9 {
 		fmt.Println("Invalid input")
 		fmt.Println("The input should be: encrypt-auth <mode> -k <32-byte key in hexadecimal> -i <input file> -o <outputfile>")
 		return
 	}
 
+	// first 16 bytes are encryption key, last 16 bytes are key to mac
 	key := args[4]
 	key_enc := []byte(key[0:16])
 	key_mac := []byte(key[16:32])
@@ -90,8 +115,8 @@ func main() {
 		}
 		output := args[8]
 		encrypt(plaintext, key_enc, key_mac, output)
-	} 
-	else if args[2] == "decrypt" {
+	}
+	if args[2] == "decrypt" {
 		fmt.Print("decrypt")
 	}
 }
