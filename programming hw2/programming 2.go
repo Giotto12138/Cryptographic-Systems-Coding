@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/aes"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
@@ -86,8 +87,94 @@ func encrypt(plaintext []byte, key_enc []byte, key_mac []byte, output string) {
 	iv := make([]byte, 16)
 	_, iv_err := rand.Read(iv)
 	if iv_err != nil {
-		fmt.Println("wrong iv")
-		os.Exit(1)
+		panic(iv_err)
+	}
+	fmt.Println(iv)
+
+	// store initial iv
+	initial_iv := make([]byte, 16)
+	copy(initial_iv, iv)
+
+	// do aes-cbc
+	// calculate how many blocks to encrypt
+	//block_num := len(plaintext) / 16
+
+	// initiate aes block
+	block, aes_err := aes.NewCipher(key_enc)
+	if aes_err != nil {
+		panic(aes_err)
+	}
+	// initiate an array for ciphertext
+	ciphertext := make([]byte, len(plaintext))
+
+	//encrypt every block
+	for index := 0; index < len(plaintext); index = index + 16 {
+		// xor plaintext and iv or previous ciphertext
+		kz := make([]byte, 16)
+		j := 0
+		for i := index; i < index+16; i++ {
+			kz[j] = plaintext[i] ^ iv[j]
+			j = j + 1
+		}
+		// do aes-ecb for (plaintext xor iv)
+		block.Encrypt(ciphertext[index:index+16], kz)
+		// previous ciphertext is a new iv
+		iv = ciphertext[index : index+16]
+	}
+
+	// concatenate initial iv and the ciphertext
+	civ := make([]byte, len(plaintext)+16)
+
+	copy(civ, initial_iv)
+	copy(civ[16:], ciphertext)
+
+	//return civ
+
+	// write civ into a file
+	write_err := ioutil.WriteFile(output, civ, 0644)
+	if write_err != nil {
+		panic(write_err)
+	}
+
+	fmt.Println("final ciphertext:", civ)
+}
+
+func decrypt(input []byte, key_enc []byte, key_mac []byte, output string) {
+
+	// initiate aes block
+	block, aes_err := aes.NewCipher(key_enc)
+	if aes_err != nil {
+		panic(aes_err)
+	}
+
+	// get the initial iv
+	iv := make([]byte, 16)
+	copy(iv, input[:16])
+	// get the ciphertext
+	ciphertext := make([]byte, len(input)-16)
+	copy(ciphertext, input[16:])
+
+	plaintext := make([]byte, len(ciphertext))
+	//decrypt every block
+	for index := 0; index < len(ciphertext); index = index + 16 {
+
+		kz := make([]byte, 16)
+		// decrypt every block of ciphertext and store in kz
+		block.Decrypt(kz, ciphertext[index:index+16])
+		// xor kz and iv
+		j := 0
+		for i := index; i < index+16; i++ {
+			plaintext[i] = kz[j] ^ iv[j]
+			j = j + 1
+		}
+		// previous ciphertext is a new iv
+		iv = ciphertext[index : index+16]
+	}
+
+	// check padding
+	padded := plaintext[len(plaintext)-1]
+	for i := 0; i < int(padded); i++ {
+
 	}
 
 }
@@ -109,14 +196,19 @@ func main() {
 	key_mac := []byte(key[16:32])
 
 	if args[2] == "encrypt" {
-		plaintext, err := ioutil.ReadFile(args[6])
-		if err != nil {
-			fmt.Print(err)
+		plaintext, readfile_err := ioutil.ReadFile(args[6])
+		if readfile_err != nil {
+			fmt.Print(readfile_err)
 		}
 		output := args[8]
 		encrypt(plaintext, key_enc, key_mac, output)
 	}
 	if args[2] == "decrypt" {
-		fmt.Print("decrypt")
+		ciphertext, readfile_err := ioutil.ReadFile(args[6])
+		if readfile_err != nil {
+			fmt.Print(readfile_err)
+		}
+		output := args[8]
+		decrypt(ciphertext, key_enc, key_mac, output)
 	}
 }
