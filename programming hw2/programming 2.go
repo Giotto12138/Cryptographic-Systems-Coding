@@ -173,10 +173,39 @@ func decrypt(input []byte, key_enc []byte, key_mac []byte, output string) {
 
 	// check padding
 	padded := plaintext[len(plaintext)-1]
-	for i := 0; i < int(padded); i++ {
+	pad_check := make([]byte, int(padded))
+	// get all the padded value and store them in pad_check
+	copy(pad_check, plaintext[len(plaintext)-int(padded):len(plaintext)])
 
+	for i := 0; i < int(padded); i++ {
+		if pad_check[i] != padded {
+			fmt.Println("INVALID PADDING")
+			os.Exit(1)
+		}
 	}
 
+	// get the real plaintext by strip padding and 32 byte tag
+	real_plaintext := make([]byte, len(plaintext)-int(padded)-32)
+	copy(real_plaintext, plaintext[:len(plaintext)-int(padded)-32])
+
+	// calculate the tag
+	tag := hmac(key_mac, real_plaintext)
+	tag_check := plaintext[len(plaintext)-int(padded)-32 : len(plaintext)-int(padded)]
+
+	for i := 0; i < len(tag); i++ {
+		if tag[i] != tag_check[i] {
+			fmt.Println("INVALID MAC")
+			os.Exit(1)
+		}
+	}
+
+	// write real plaintext into a file
+	write_err := ioutil.WriteFile(output, real_plaintext, 0644)
+	if write_err != nil {
+		panic(write_err)
+	}
+
+	fmt.Println("final ciphertext:", real_plaintext)
 }
 
 func main() {
