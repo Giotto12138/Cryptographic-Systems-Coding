@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,6 @@ import (
 func attack(ciphertext []byte) {
 
 	plaintext := make([]byte, len(ciphertext))
-	copy(plaintext, ciphertext)
 
 	// calculate how many blocks
 	num := len(ciphertext) / 16
@@ -21,18 +19,21 @@ func attack(ciphertext []byte) {
 	// starting from the end, process every two blocks for one time
 	for i := num - 1; i > 0; i-- {
 
-		// move two blocks to the end
-		copy(ciphertext[len(ciphertext)-32:len(ciphertext)], plaintext[i*16-16:i*16+16])
+		// choose two blocks every time
+		chosen := make([]byte, 32)
+		copy(chosen, ciphertext[i*16-16:i*16+16])
 
 		// c1 is the first block of ciphertext of two chosen blocks
 		c1 := make([]byte, 16)
-		copy(c1, ciphertext[len(ciphertext)-32:len(ciphertext)-16])
+		copy(c1, chosen[:16])
 
 		// intermediate is the decrypted block of the second block of two chosen blocks
 		intermediate := make([]byte, 16)
 
 		// c_1 is to store modified c1
-		c_1 := ciphertext[len(ciphertext)-32 : len(ciphertext)-16]
+		c_1 := make([]byte, 16)
+		copy(c_1, c1)
+		// fill c_1 with random values
 		_, c1_err := rand.Read(c_1)
 		if c1_err != nil {
 			fmt.Print(c1_err)
@@ -53,12 +54,12 @@ func attack(ciphertext []byte) {
 				// set guessed byte from 0x00 to 0x100 to find a right one
 				c_1[i] = byte(k)
 
-				var output []byte
-				output = make([]byte, hex.EncodedLen(len(ciphertext)))
-				hex.Encode(output, ciphertext)
+				input := make([]byte, 32)
+				copy(input[:16], c_1)
+				copy(input[16:], chosen[16:])
 
-				// write output to a file for decrypt-test to decrypt
-				writeFile_err := ioutil.WriteFile("attack.txt", output, 0644)
+				// write input(two blocks) to a file for decrypt-test to decrypt
+				writeFile_err := ioutil.WriteFile("attack.txt", input, 0644)
 				if writeFile_err != nil {
 					panic(writeFile_err)
 				}
@@ -68,6 +69,8 @@ func attack(ciphertext []byte) {
 				if test_err != nil {
 					fmt.Print(test_err)
 				}
+
+				fmt.Println(string(out))
 				// if padding is right, get the right byte
 				if !strings.Contains(string(out), "INVALID PADDING") {
 					break
@@ -94,6 +97,7 @@ func attack(ciphertext []byte) {
 	fmt.Println()
 	fmt.Print("plaintext:  ")
 	fmt.Println(plaintext[16:])
+	fmt.Println(string(plaintext[16:]))
 
 	// write real plaintext into a file
 	write_err := ioutil.WriteFile("c.txt", plaintext[16:], 0644)
