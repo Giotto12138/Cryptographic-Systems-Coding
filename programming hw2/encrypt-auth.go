@@ -207,7 +207,7 @@ func decrypt(input []byte, key_enc []byte, key_mac []byte, output string) {
 		panic(write_err)
 	}
 
-	fmt.Println("final ciphertext:", real_plaintext)
+	fmt.Println("final plaintext:", real_plaintext)
 }
 
 func main() {
