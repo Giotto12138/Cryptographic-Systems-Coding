@@ -1,3 +1,5 @@
+// key "abcdeasagdguyesfabsdeugjkdnxlqos"
+
 package main
 
 import (
@@ -213,31 +215,31 @@ func main() {
 	args := os.Args
 
 	// check the arguments
-	if len(args) != 9 {
+	if len(args) != 8 || !(args[1] == "encrypt" || args[1] == "decrypt") || args[2] != "-k" || args[4] != "-i" || args[6] != "-o" || len(args[3]) != 64 {
 		fmt.Println("Invalid input")
 		fmt.Println("The input should be: encrypt-auth <mode> -k <32-byte key in hexadecimal> -i <input file> -o <outputfile>")
 		return
 	}
 
 	// first 16 bytes are encryption key, last 16 bytes are key to mac
-	key := args[4]
+	key := args[3]
 	key_enc := []byte(key[0:16])
 	key_mac := []byte(key[16:32])
 
-	if args[2] == "encrypt" {
-		plaintext, readfile_err := ioutil.ReadFile(args[6])
+	if args[1] == "encrypt" {
+		plaintext, readfile_err := ioutil.ReadFile(args[5])
 		if readfile_err != nil {
 			fmt.Print(readfile_err)
 		}
-		output := args[8]
+		output := args[7]
 		encrypt(plaintext, key_enc, key_mac, output)
 	}
-	if args[2] == "decrypt" {
-		ciphertext, readfile_err := ioutil.ReadFile(args[6])
+	if args[1] == "decrypt" {
+		ciphertext, readfile_err := ioutil.ReadFile(args[5])
 		if readfile_err != nil {
 			fmt.Print(readfile_err)
 		}
-		output := args[8]
+		output := args[7]
 		decrypt(ciphertext, key_enc, key_mac, output)
 	}
 }
