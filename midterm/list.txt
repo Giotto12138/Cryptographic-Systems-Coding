@@ -1,0 +1,48 @@
+sort(list,people,num)
+{
+    for i=0; i<num-1; i++
+    {
+        for j=i+1; j<num; j++
+        {
+            if list[i]>list[j]  // if the value is larger than its next value, exchange them
+            {
+                temp = list[i]
+                list[i] = list[j]
+                list[j] = temp
+
+                temp = people[i]    // exchange people at the same time
+                people[i] = people[j]
+                people[j] = temp
+            }
+        }
+    }
+
+    return list
+}
+
+
+
+main()
+{
+    people[num]
+    list[num]
+    
+    for i=0; i<num; i++        // num is the number of patients
+    {  	
+        rand_num = generator() 	    // get random numbers
+        
+        rand_num = decimal(rand_num)  // convert random numbers to decimal numbers
+
+        if rand_num not in rand[]   // if this is a unique random number
+        {  	
+        list[i] = rand_num
+        }
+    }
+
+    for i=0; i<num; i++
+    {
+        people[i] = identifier
+    }
+
+    new_list = sort(list,people,num)  // sort the patients
+}

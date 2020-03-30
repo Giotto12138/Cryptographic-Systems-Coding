@@ -6,8 +6,17 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
+
+func convert(b []byte) string { // change byte to string
+	s := make([]string, len(b))
+	for i := range b {
+		s[i] = strconv.Itoa(int(b[i]))
+	}
+	return strings.Join(s, ",")
+}
 
 func attack(ciphertext []byte) {
 
@@ -97,7 +106,8 @@ func attack(ciphertext []byte) {
 	fmt.Println()
 	fmt.Print("plaintext:  ")
 	fmt.Println(plaintext[16:])
-	fmt.Println(string(plaintext[16:]))
+
+	fmt.Println(convert(plaintext[16:]))
 
 	// write real plaintext into a file
 	write_err := ioutil.WriteFile("c.txt", plaintext[16:], 0644)
