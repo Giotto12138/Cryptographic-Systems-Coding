@@ -26,7 +26,7 @@ func attack(ciphertext []byte) {
 	num := len(ciphertext) / 16
 
 	// starting from the end, process every two blocks for one time
-	for i := num - 1; i > 0; i-- {
+	for i := num - 1; i >= 0; i-- {
 
 		// choose two blocks every time
 		chosen := make([]byte, 32)
@@ -58,7 +58,7 @@ func attack(ciphertext []byte) {
 			}
 
 			// try every possible value to guess
-			for k := 0x00; k < 0x100; {
+			for k := 0x00; k < 0xFF; {
 
 				// set guessed byte from 0x00 to 0x100 to find a right one
 				c_1[i] = byte(k)
@@ -107,7 +107,7 @@ func attack(ciphertext []byte) {
 	fmt.Print("plaintext:  ")
 	fmt.Println(plaintext[16:])
 
-	fmt.Println(convert(plaintext[16:]))
+	//fmt.Println(convert(plaintext[16:]))
 
 	// write real plaintext into a file
 	write_err := ioutil.WriteFile("c.txt", plaintext[16:], 0644)
