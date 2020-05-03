@@ -1,0 +1,42 @@
+func generator(p *big.Int, q *big.Int) *big.Int {
+	var one *big.Int = big.NewInt(1)
+	var two *big.Int = big.NewInt(2)
+	var g *big.Int = big.NewInt(2) // the generator to be checked, begin from 2
+	var temp *big.Int = new(big.Int)
+
+	for true {
+		// the formula to check if it is a generator: g{(p-1)/n} mod p
+		// n is 2 or q
+		flag := 0 // if flag equals 2, it is a generator
+		var n *big.Int
+
+		for i := 0; i < 2; i++ {
+
+			if i == 0 {
+				n = two
+			} else {
+				n = q
+			}
+
+			temp.Sub(p, one)     // get p-1
+			temp.Div(temp, n)    // get (p-1)/n
+			temp.Exp(g, temp, p) // get g{(p-1)/n} mod p
+
+			fmt.Println("temp: ", temp)
+
+			if temp.Cmp(one) != 0 { // if the result is not 1, it is good
+				flag = flag + 1
+			}
+
+		}
+
+		if flag == 2 { // this is a generator
+			break
+		}
+
+		// if not a generator, try next one
+		g.Add(g, one)
+	}
+
+	return g
+}
