@@ -111,7 +111,7 @@ func main() {
 	// check the arguments
 	if len(args) != 3 {
 		fmt.Println("Invalid input")
-		fmt.Println("The input should be: dh-alice1 <filename for message to Bob> <filename to store secret key>")
+		fmt.Println("The input should be: elg-keygen <filename to store public key> <filename to store secret key>")
 		return
 	}
 	pubFile := args[1]
