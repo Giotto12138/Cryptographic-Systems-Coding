@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -51,6 +55,51 @@ func pubAnalyze(pub string) (*big.Int, *big.Int, *big.Int) {
 	return &p, &g, &g_a
 }
 
+func hash(g_a, g_b, g_ab *big.Int) []byte {
+
+	temp := g_a.String() + " " + g_b.String() + " " + g_ab.String()
+	//fmt.Println("temp:   ", temp)
+	res := sha256.Sum256([]byte(temp))
+	return res[:]
+}
+
+// aes-gcm encryption
+func encrypt(plaintext string, key []byte) []byte {
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// generate 16 bits random nonce
+	nonce := make([]byte, 16)
+	_, _ = rand.Read(nonce)
+	if false {
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			panic(err.Error())
+		}
+	}
+
+	//fmt.Printf("nonce: %x\n", nonce)
+	aesgcm, err := cipher.NewGCMWithNonceSize(block, 16)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, []byte(plaintext), nil)
+	//fmt.Printf("cipher:%x\n", ciphertext)
+
+	// concatenate nonce with ciphertext
+	result := make([]byte, len(nonce)+len(ciphertext))
+	result = nonce
+	for i := 0; i < len(ciphertext); i++ {
+		result = append(result, ciphertext[i])
+	}
+
+	return result
+
+}
+
 func main() {
 
 	var one *big.Int = big.NewInt(1)
@@ -63,18 +112,19 @@ func main() {
 		fmt.Println("The input should be: elg-encrypt <message text as a string with quotes> <filename of public key> <filename of ciphertext>")
 		return
 	}
-	AlicePub := args[1]
-	BobPub := args[2]
+	plaintext := args[1]
+	pubKeyFile := args[2]
+	cipherFile := args[3]
 
-	// read the file storing public key of Alice
-	text, err := os.Open(AlicePub)
+	// read the file storing public key
+	text, err := os.Open(pubKeyFile)
 	if err != nil {
 		fmt.Println("Input File Error")
 		os.Exit(1)
 	}
 	pubStr, _ := ioutil.ReadAll(text)
 
-	// get p, g, g_a from the public key of Alice
+	// get p, g, g_a from the public key
 	p, g, g_a := pubAnalyze(string(pubStr))
 
 	// generate secret number b
@@ -87,26 +137,37 @@ func main() {
 	var g_b *big.Int = new(big.Int)
 	g_b.Exp(g, b, p)
 
-	pubKey := "( " + g_b.String() + " )"
-
-	var f1 *os.File
-	var err1 error
-
-	// write public key into the first file
-	if checkFileIsExist(BobPub) { // if the file exists, open it
-		f1, err1 = os.OpenFile(BobPub, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	} else {
-		f1, err1 = os.Create(BobPub) // if the file doesn't exists, create it
-	}
-
-	check(err1)
-	_, err1 = io.WriteString(f1, pubKey)
-
-	// get g^{ab} mod p
+	// get g^{ab} mod p as private key
 	var g_ab *big.Int = new(big.Int)
 	g_ab.Exp(g_a, b, p)
 
 	fmt.Println("the shared secret key g^{ab} mod p")
 	fmt.Println(g_ab)
+
+	// generate k = SHA256(g_a||g_b||g_ab).
+	k := hash(g_a, g_b, g_ab)
+	//fmt.Println(k)
+
+	// encrypt the plaintext with aes-gcm
+	ciphertext := encrypt(plaintext, k)
+	//fmt.Println(ciphertext)
+
+	// change ciphertext to hexadecimal format
+	cipherHex := make([]byte, hex.EncodedLen(len(ciphertext)))
+	hex.Encode(cipherHex, ciphertext)
+	//fmt.Println(cipherHex)
+
+	var f1 *os.File
+	var err1 error
+
+	// write ciphertext into the third file
+	if checkFileIsExist(cipherFile) { // if the file exists, open it
+		f1, err1 = os.OpenFile(cipherFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	} else {
+		f1, err1 = os.Create(cipherFile) // if the file doesn't exists, create it
+	}
+
+	check(err1)
+	_, err1 = io.WriteString(f1, string(cipherHex))
 
 }

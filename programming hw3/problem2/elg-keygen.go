@@ -115,7 +115,7 @@ func main() {
 		return
 	}
 	pubFile := args[1]
-	priFile := args[2]
+	secretFile := args[2]
 
 	var one *big.Int = big.NewInt(1)
 	var two *big.Int = big.NewInt(2)
@@ -156,7 +156,7 @@ func main() {
 	g_a.Exp(g, a, p)
 
 	pubKey := "( " + p.String() + "," + g.String() + "," + g_a.String() + " )"
-	priKey := "( " + p.String() + "," + g.String() + "," + a.String() + " )"
+	secretKey := "( " + p.String() + "," + g.String() + "," + a.String() + " )"
 
 	var f1, f2 *os.File
 	var err1, err2 error
@@ -172,14 +172,14 @@ func main() {
 	_, err1 = io.WriteString(f1, pubKey)
 
 	// write private key into the second file
-	if checkFileIsExist(priFile) { // if the file exists, open it
-		f2, err2 = os.OpenFile(priFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if checkFileIsExist(secretFile) { // if the file exists, open it
+		f2, err2 = os.OpenFile(secretFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	} else {
-		f2, err2 = os.Create(priFile) // if the file doesn't exists, create it
+		f2, err2 = os.Create(secretFile) // if the file doesn't exists, create it
 	}
 
 	check(err2)
-	_, err2 = io.WriteString(f2, priKey)
+	_, err2 = io.WriteString(f2, secretKey)
 
 	fmt.Println("( p,g,g^a mod p )")
 	fmt.Println(pubKey)
