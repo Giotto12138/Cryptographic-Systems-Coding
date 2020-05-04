@@ -58,50 +58,27 @@ func generator(p *big.Int, q *big.Int) *big.Int {
 	var one *big.Int = big.NewInt(1)
 	var two *big.Int = big.NewInt(2)
 	//var g *big.Int = big.NewInt(2) // the generator to be checked, begin from 2
-	var temp *big.Int = new(big.Int)
+	var pMinusOne = new(big.Int).Sub(p, one)
+	var temp1 *big.Int = new(big.Int)
+	var temp2 *big.Int = new(big.Int)
 
 	// get a random number from 2 to p-1
 	var g *big.Int = new(big.Int)
-	var pMinusOne *big.Int = new(big.Int)
-	pMinusOne.Sub(p, one)                   // get p-1
 	g, _ = rand.Int(rand.Reader, pMinusOne) // get a random a from 1 to p-1
 
+	// if g^2 mod p !=1 && g^q mod p != 1, g is a generator
 	for true {
-		// the formula to check if it is a generator: g{(p-1)/n} mod p
-		// n is 2 or q
-		flag := 0 // if flag equals 2, it is a generator
-		var n *big.Int = new(big.Int)
+		temp1.Exp(g, two, p)
+		temp2.Exp(g, q, p)
 
-		for i := 0; i < 2; i++ {
-
-			if i == 0 {
-				n.Set(two)
-			} else {
-				n.Set(q)
-			}
-
-			temp.Sub(p, one)     // get p-1
-			temp.Div(temp, n)    // get (p-1)/n
-			temp.Exp(g, temp, p) // get g{(p-1)/n} mod p
-
-			//fmt.Println("temp: ", temp)
-
-			if temp.Cmp(one) != 0 { // if the result is not 1, it is good
-				flag = flag + 1
-			}
-
-		}
-
-		if flag == 2 { // this is a generator
+		if temp1.Cmp(one) != 0 && temp2.Cmp(one) != 0 {
 			break
 		}
-
 		// if not a generator, try a new one
 		g, _ = rand.Int(rand.Reader, pMinusOne)
 	}
 
 	return g
-
 }
 
 func main() {

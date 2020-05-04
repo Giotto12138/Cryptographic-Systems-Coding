@@ -69,6 +69,7 @@ func generator(p *big.Int, q *big.Int) *big.Int {
 	var g *big.Int = new(big.Int)
 	g, _ = rand.Int(rand.Reader, pMinusOne) // get a random a from 1 to p-1
 
+	// if g^2 mod p !=1 && g^q mod p != 1, g is a generator
 	for true {
 		temp1.Exp(g, two, p)
 		temp2.Exp(g, q, p)
@@ -81,7 +82,6 @@ func generator(p *big.Int, q *big.Int) *big.Int {
 	}
 
 	return g
-
 }
 
 func main() {
