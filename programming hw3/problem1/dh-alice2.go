@@ -95,7 +95,7 @@ func main() {
 	}
 	priStr, _ := ioutil.ReadAll(text2)
 
-	// get a, p from the public key of Bob
+	// get a, p from the private key of Alice
 	a, p := priAnalyze(string(priStr))
 
 	// get g^{ab} mod p

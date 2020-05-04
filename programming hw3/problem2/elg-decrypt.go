@@ -3,11 +3,9 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -31,28 +29,50 @@ func checkFileIsExist(filename string) bool {
 	return exist
 }
 
-// analyze the public key from Alice
-func pubAnalyze(pub string) (*big.Int, *big.Int, *big.Int) {
+// analyze the secret key
+func secretAnalyze(secret string) (*big.Int, *big.Int, *big.Int) {
 
-	var p, g, g_a big.Int
+	var p, g, a big.Int
 
 	// delete spaces in the string
-	pub = strings.Replace(pub, " ", "", -1)
+	secret = strings.Replace(secret, " ", "", -1)
 	// split the string with comma, get three parts
-	strSplit := strings.Split(pub, ",")
+	strSplit := strings.Split(secret, ",")
 	// get p from the first part
 	pStr := strings.Split(strSplit[0], "(")
 	// get g from the second part
 	gStr := strSplit[1]
 	// get g_a from the second part
-	g_aStr := strings.Split(strSplit[2], ")")
+	aStr := strings.Split(strSplit[2], ")")
 
 	// convert string to *big.Int
 	p.SetString(pStr[1], 10)
 	g.SetString(gStr, 10)
-	g_a.SetString(g_aStr[0], 10)
+	a.SetString(aStr[0], 10)
 
-	return &p, &g, &g_a
+	return &p, &g, &a
+}
+
+// analyze the cipher pair
+func cipherAnalyze(pri string) (*big.Int, string) {
+
+	var g_b big.Int
+
+	// delete spaces in the string
+	pri = strings.Replace(pri, " ", "", -1)
+	// split the string with comma, get three parts
+	strSplit := strings.Split(pri, ",")
+	// get g_b from the first part
+	g_bStr := strings.Split(strSplit[0], "(")
+	// get ciphertext from the second part
+	cipher := strings.Split(strSplit[1], ")")
+
+	// convert string to *big.Int
+	g_b.SetString(g_bStr[1], 10)
+	// get the ciphertext
+	ciphertext := cipher[0]
+
+	return &g_b, ciphertext
 }
 
 func hash(g_a, g_b, g_ab *big.Int) []byte {
@@ -63,21 +83,12 @@ func hash(g_a, g_b, g_ab *big.Int) []byte {
 	return res[:]
 }
 
-// aes-gcm encryption
-func encrypt(plaintext string, key []byte) []byte {
+// aes-gcm decryption
+func decrypt(cipherNonce string, key []byte) string {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
-	}
-
-	// generate 16 bits random nonce
-	nonce := make([]byte, 16)
-	_, _ = rand.Read(nonce)
-	if false {
-		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-			panic(err.Error())
-		}
 	}
 
 	//fmt.Printf("nonce: %x\n", nonce)
@@ -86,23 +97,22 @@ func encrypt(plaintext string, key []byte) []byte {
 		panic(err.Error())
 	}
 
-	ciphertext := aesgcm.Seal(nil, nonce, []byte(plaintext), nil)
-	//fmt.Printf("cipher:%x\n", ciphertext)
+	// get ciphertext and nonce
+	nonce := make([]byte, 16)
+	ciphertext := make([]byte, len(cipherNonce)-16)
+	copy(nonce, cipherNonce[0:16])
+	copy(ciphertext, cipherNonce[16:])
 
-	// concatenate nonce with ciphertext
-	result := make([]byte, len(nonce)+len(ciphertext))
-	result = nonce
-	for i := 0; i < len(ciphertext); i++ {
-		result = append(result, ciphertext[i])
+	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		panic(err.Error())
 	}
 
-	return result
+	return string(plaintext)
 
 }
 
 func main() {
-
-	var one *big.Int = big.NewInt(1)
 
 	args := os.Args
 
@@ -112,62 +122,49 @@ func main() {
 		fmt.Println("elg-decrypt <filename of ciphertext> <filename to read secret key>")
 		return
 	}
-	plaintext := args[1]
-	pubKeyFile := args[2]
-	cipherFile := args[3]
+	cipherFile := args[1]
+	secretFile := args[2]
 
-	// read the file storing public key
-	text, err := os.Open(pubKeyFile)
-	if err != nil {
+	// read the file storing the secret key
+	text1, err1 := os.Open(secretFile)
+	if err1 != nil {
 		fmt.Println("Input File Error")
 		os.Exit(1)
 	}
-	pubStr, _ := ioutil.ReadAll(text)
+	secretStr, _ := ioutil.ReadAll(text1)
 
-	// get p, g, g_a from the public key
-	p, g, g_a := pubAnalyze(string(pubStr))
+	// get p, g, a from the secret key
+	p, g, a := secretAnalyze(string(secretStr))
 
-	// generate secret number b
-	var b *big.Int = new(big.Int)
-	var pMinusOne *big.Int = new(big.Int)
-	pMinusOne.Sub(p, one)                   // get p-1
-	b, _ = rand.Int(rand.Reader, pMinusOne) // get a random b from 1 to p-1
+	// read the file storing the ciphertext pair
+	text2, err2 := os.Open(cipherFile)
+	if err2 != nil {
+		fmt.Println("Input File Error")
+		os.Exit(1)
+	}
+	cipherStr, _ := ioutil.ReadAll(text2)
 
-	// get g^b mod p
-	var g_b *big.Int = new(big.Int)
-	g_b.Exp(g, b, p)
+	// get a, p from the secret key
+	g_b, ciphertextHex := cipherAnalyze(string(cipherStr))
 
 	// get g^{ab} mod p as private key
 	var g_ab *big.Int = new(big.Int)
-	g_ab.Exp(g_a, b, p)
+	g_ab.Exp(g_b, a, p)
 
-	fmt.Println("the shared secret key g^{ab} mod p")
-	fmt.Println(g_ab)
+	// get g^a mod p
+	var g_a *big.Int = new(big.Int)
+	g_a.Exp(g, a, p)
 
 	// generate k = SHA256(g_a||g_b||g_ab).
 	k := hash(g_a, g_b, g_ab)
 	//fmt.Println(k)
 
+	// change ciphertext from hex to decimal
+	ciphertext := make([]byte, hex.DecodedLen(len(ciphertextHex)))
+	hex.Decode(ciphertext, []byte(ciphertextHex))
+
 	// encrypt the plaintext with aes-gcm
-	ciphertext := encrypt(plaintext, k)
-	//fmt.Println(ciphertext)
-
-	// change ciphertext to hexadecimal format
-	cipherHex := make([]byte, hex.EncodedLen(len(ciphertext)))
-	hex.Encode(cipherHex, ciphertext)
-	//fmt.Println(cipherHex)
-
-	var f1 *os.File
-	var err1 error
-
-	// write ciphertext into the third file
-	if checkFileIsExist(cipherFile) { // if the file exists, open it
-		f1, err1 = os.OpenFile(cipherFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	} else {
-		f1, err1 = os.Create(cipherFile) // if the file doesn't exists, create it
-	}
-
-	check(err1)
-	_, err1 = io.WriteString(f1, string(cipherHex))
+	plaintext := decrypt(string(ciphertext), k)
+	fmt.Println(plaintext)
 
 }

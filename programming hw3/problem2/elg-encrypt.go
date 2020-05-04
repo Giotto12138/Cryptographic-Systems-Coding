@@ -157,6 +157,8 @@ func main() {
 	hex.Encode(cipherHex, ciphertext)
 	//fmt.Println(cipherHex)
 
+	cipherPair := "( " + g_b.String() + "," + string(cipherHex) + " )"
+
 	var f1 *os.File
 	var err1 error
 
@@ -168,6 +170,6 @@ func main() {
 	}
 
 	check(err1)
-	_, err1 = io.WriteString(f1, string(cipherHex))
+	_, err1 = io.WriteString(f1, cipherPair)
 
 }
