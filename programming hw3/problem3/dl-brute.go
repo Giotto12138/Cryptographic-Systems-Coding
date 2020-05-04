@@ -59,6 +59,7 @@ func bruteForce(p, g, g_a *big.Int) {
 	// guess the x, beginning from p-1 to 1
 	for x.Set(pMinusOne); x.Cmp(zero) > 0; x.Sub(x, one) {
 		temp.Exp(g, x, p)
+		//fmt.Println("temp:", temp)
 
 		if temp.Cmp(g_a) == 0 {
 			break

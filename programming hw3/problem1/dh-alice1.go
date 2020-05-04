@@ -39,14 +39,14 @@ func getPrime() *big.Int {
 func checkPrime(q *big.Int) bool {
 
 	// calculate how many bits the p has
-	if q.BitLen() != 1023 {
-		fmt.Printf("%v is not %d-bit", q, 1023)
-		return false
-	}
+	// if q.BitLen() != 1023 {
+	// 	fmt.Printf("%v is not %d-bit", q, 1023)
+	// 	return false
+	// }
 	// 32 times of Miller Rabin Prime Number test were performed on P. If the method returns true,
 	// the probability that P is prime is 1 - (1 / 4) * * 32; otherwise, P is not prime
 	if !q.ProbablyPrime(32) {
-		fmt.Printf("%v is not prime", q)
+		//fmt.Printf("%v is not prime", q)
 		return false
 	}
 
@@ -124,19 +124,21 @@ func main() {
 
 	q = getPrime()
 
-	// check the prime q, if it is not qualified, generate a new q and check again until we have a qualified q
+	// generate a safe prime number p based on q, p = q*2+1
+	p.Mul(q, two)
+	p.Add(p, one)
+
+	// check the prime number q and prime number p, if it is not qualified,
+	// generate a new q and check again until we have a qualified q and a qualified p
 	for true {
-		if checkPrime(q) {
+		if checkPrime(q) && checkPrime(p) {
 			break
 		} else {
 			q = getPrime()
+			p.Mul(q, two)
+			p.Add(p, one)
 		}
 	}
-
-	// generate a safe prime number p based on q, p = q*2+1
-	//temp = q
-	p.Mul(q, two)
-	p.Add(p, one)
 
 	// fmt.Println("q: ", q)
 	// fmt.Println("p: ", p)

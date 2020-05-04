@@ -41,15 +41,15 @@ func getPrime() *big.Int {
 // check a big prime number
 func checkPrime(q *big.Int) bool {
 
-	// calculate how many bits the p has
-	if q.BitLen() != 20 {
-		fmt.Printf("%v is not %d-bit", q, 20)
-		return false
-	}
+	// // calculate how many bits the p has
+	// if q.BitLen() != 4 {
+	// 	fmt.Printf("%v is not %d-bit", q, 4)
+	// 	return false
+	// }
 	// 32 times of Miller Rabin Prime Number test were performed on P. If the method returns true,
 	// the probability that P is prime is 1 - (1 / 4) * * 32; otherwise, P is not prime
 	if !q.ProbablyPrime(32) {
-		fmt.Printf("%v is not prime", q)
+		//fmt.Printf("%v is not prime", q)
 		return false
 	}
 
@@ -61,44 +61,21 @@ func generator(p *big.Int, q *big.Int) *big.Int {
 	var one *big.Int = big.NewInt(1)
 	var two *big.Int = big.NewInt(2)
 	//var g *big.Int = big.NewInt(2) // the generator to be checked, begin from 2
-	var temp *big.Int = new(big.Int)
+	var pMinusOne = new(big.Int).Sub(p, one)
+	var temp1 *big.Int = new(big.Int)
+	var temp2 *big.Int = new(big.Int)
 
 	// get a random number from 2 to p-1
 	var g *big.Int = new(big.Int)
-	var pMinusOne *big.Int = new(big.Int)
-	pMinusOne.Sub(p, one)                   // get p-1
 	g, _ = rand.Int(rand.Reader, pMinusOne) // get a random a from 1 to p-1
 
 	for true {
-		// the formula to check if it is a generator: g{(p-1)/n} mod p
-		// n is 2 or q
-		flag := 0 // if flag equals 2, it is a generator
-		var n *big.Int = new(big.Int)
+		temp1.Exp(g, two, p)
+		temp2.Exp(g, q, p)
 
-		for i := 0; i < 2; i++ {
-
-			if i == 0 {
-				n.Set(two)
-			} else {
-				n.Set(q)
-			}
-
-			temp.Sub(p, one)     // get p-1
-			temp.Div(temp, n)    // get (p-1)/n
-			temp.Exp(g, temp, p) // get g{(p-1)/n} mod p
-
-			//fmt.Println("temp: ", temp)
-
-			if temp.Cmp(one) != 0 { // if the result is not 1, it is good
-				flag = flag + 1
-			}
-
-		}
-
-		if flag == 2 { // this is a generator
+		if temp1.Cmp(one) != 0 && temp2.Cmp(one) != 0 {
 			break
 		}
-
 		// if not a generator, try a new one
 		g, _ = rand.Int(rand.Reader, pMinusOne)
 	}
@@ -127,20 +104,21 @@ func main() {
 
 	// generate a 20 bits prime number
 	q = getPrime()
+	// generate a safe prime number p based on q, p = q*2+1
+	p.Mul(q, two)
+	p.Add(p, one)
 
-	// check the prime q, if it is not qualified, generate a new q and check again until we have a qualified q
+	// check the prime number q and prime number p, if it is not qualified,
+	// generate a new q and check again until we have a qualified q and a qualified p
 	for true {
-		if checkPrime(q) {
+		if checkPrime(q) && checkPrime(p) {
 			break
 		} else {
 			q = getPrime()
+			p.Mul(q, two)
+			p.Add(p, one)
 		}
 	}
-
-	// generate a safe prime number p based on q, p = q*2+1
-	//temp = q
-	p.Mul(q, two)
-	p.Add(p, one)
 
 	// fmt.Println("q: ", q)
 	// fmt.Println("p: ", p)
