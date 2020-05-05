@@ -31,9 +31,9 @@ func checkFileIsExist(filename string) bool {
 // generate a 1023 bits prime number q
 func getPrime() *big.Int {
 
-	q, err := rand.Prime(rand.Reader, 20)
+	q, err := rand.Prime(rand.Reader, 40)
 	if err != nil {
-		fmt.Printf("Can't generate %d-bit prime: %v", 20, err)
+		fmt.Printf("Can't generate %d-bit prime: %v", 40, err)
 	}
 	return q
 }
