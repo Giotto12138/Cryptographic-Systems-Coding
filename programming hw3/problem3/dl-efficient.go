@@ -61,11 +61,24 @@ func efficient(p, g, g_a *big.Int) {
 	var g_j *big.Int = new(big.Int)
 	var g_aj *big.Int = new(big.Int)
 
-	// x=im-j, m =ceil(sqrt(p))
+	// x=im-j, m =ceil(sqrt(p)), if g^{im} == g^a * g^j, then we find x
 	m.Sqrt(p)
-	m.Add(m, one)
+	temp.Mul(m, m)
+	// m^2 should not be less than p
+	for true {
+		if temp.Cmp(p) >= 0 {
+			break
+		}
+		if temp.Cmp(p) < 0 {
+			m.Add(m, one)
+			temp.Mul(m, m)
+		}
+	}
+	// fmt.Println("p:  ", p)
+	// fmt.Println("temp:  ", temp)
 
-	flag := 0
+	// a map to store all the g_aj
+	dict := make(map[string]*big.Int)
 
 	// iterate j, beginning from 0 to m
 	for j.Set(zero); j.Cmp(m) < 0; j.Add(j, one) {
@@ -73,32 +86,32 @@ func efficient(p, g, g_a *big.Int) {
 		g_aj.Mul(g_a, g_j)
 		g_aj.Exp(g_aj, one, p)
 		//fmt.Println("g_aj: ", g_aj)
+		gStr := g_aj.String()
+		dict[gStr] = j
+	}
 
-		// iterate i, beginning from 0 to m
-		for i.Set(zero); i.Cmp(m) < 0; i.Add(i, one) {
+	// iterate i, beginning from 0 to m
+	for i.Set(zero); i.Cmp(m) < 0; i.Add(i, one) {
 
+		temp.Mul(i, m)
+		temp.Exp(g, temp, p)
+		//fmt.Println("g_im:  ", temp)
+
+		if element, ok := dict[temp.String()]; ok {
+			// calculate x=im-j
+			fmt.Println("final")
+			fmt.Println("i:  ", i)
+			fmt.Println("j:  ", element)
 			temp.Mul(i, m)
-			temp.Exp(g, temp, p)
-			//fmt.Println("g_im:  ", temp)
-
-			if g_aj.Cmp(temp) == 0 {
-				// calculate x=im-j
-				fmt.Println("final")
-				fmt.Println("i:  ", i)
-				fmt.Println("j:  ", j)
-				temp.Mul(i, m)
-				x.Sub(temp, j)
-				fmt.Println("x is: ", x)
-				flag = flag + 1
-				break
-			}
-		}
-		if flag == 1 {
+			x.Sub(temp, element)
+			fmt.Println("x is: ", x)
 			break
 		}
-
 	}
-	//fmt.Println("mark")
+
+	if i.Cmp(m) == 0 {
+		fmt.Println("cannot find x")
+	}
 
 }
 
