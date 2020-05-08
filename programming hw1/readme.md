@@ -1,15 +1,15 @@
 # the location hierarchy of the files
-the program is in the directory new_program1
-the path is new_program1\enigma\hillclimb
+the program is in the directory new_program1          
+the path is new_program1\enigma\hillclimb  
 the text to encrypt should be under the directory hillclimb
 
 # how to use the program: 
 	
 ## 1. If you only know following of a enigma M4 machine: 
 Rotor Setup: (reﬂector) ??? ??? IV III 
-(keyboard) Initial Start 
+(keyboard) Initial Start      
 Positions: ??? ??? B Q 
-Ringstellung: 1 1 1 16 
+Ringstellung: 1 1 1 16  
 Plugboard: ??? 
 Reﬂector: C-Thin
 
